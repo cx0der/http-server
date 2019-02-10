@@ -1,11 +1,16 @@
 plugins {
-    id 'java'
+    id 'application'
 }
 
 group 'blog.devrandom'
-version '1.0-SNAPSHOT'
+version '1.0'
 
-sourceCompatibility = 1.8
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+application {
+    mainClassName = 'blog.devrandom.http.HttpServer'
+}
 
 repositories {
     mavenCentral()
