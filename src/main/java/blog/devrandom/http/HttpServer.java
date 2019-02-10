@@ -24,7 +24,7 @@ public class HttpServer implements Runnable {
 
     private Socket request;
 
-    private HttpServer(Socket request) {
+    HttpServer(Socket request) {
         this.request = request;
     }
 
