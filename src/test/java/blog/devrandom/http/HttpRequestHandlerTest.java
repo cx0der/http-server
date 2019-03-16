@@ -11,28 +11,33 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.util.Properties;
 import java.util.StringTokenizer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class HttpServerTest {
+public class HttpRequestHandlerTest {
 
     @Mock
     private Socket client;
 
     private ByteArrayOutputStream outputStream;
 
-    private HttpServer server;
+    private HttpRequestHandler requestHandler;
 
     @Before
     public void setUp() throws IOException {
         MockitoAnnotations.initMocks(this);
         outputStream = new ByteArrayOutputStream();
         when(client.getOutputStream()).thenReturn(outputStream);
-        server = new HttpServer(client);
+        when(client.getInetAddress()).thenReturn(InetAddress.getByName("localhost"));
+        Properties props = new Properties();
+        props.put(HttpRequestHandler.ROOT_PARAM, "server");
+        requestHandler = new HttpRequestHandler(client, props, System.out);
     }
 
     @Test
@@ -41,7 +46,7 @@ public class HttpServerTest {
         prepareIncomingRequestStream(generateIncomingRequest("GET", "/"));
 
         // test
-        server.run();
+        requestHandler.run();
 
         // verify
         StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));
@@ -55,7 +60,7 @@ public class HttpServerTest {
         prepareIncomingRequestStream(generateIncomingRequest("GET", "/favicon.ico"));
 
         // test
-        server.run();
+        requestHandler.run();
 
         // verify
         StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));
@@ -69,7 +74,7 @@ public class HttpServerTest {
         prepareIncomingRequestStream(generateIncomingRequest("POST", "/"));
 
         // test
-        server.run();
+        requestHandler.run();
 
         //verify
         StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));

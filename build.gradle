@@ -12,6 +12,12 @@ application {
     mainClassName = 'blog.devrandom.http.HttpServer'
 }
 
+jar {
+    manifest {
+        attributes 'Main-Class': 'blog.devrandom.http.HttpServer'
+    }
+}
+
 repositories {
     mavenCentral()
 }
