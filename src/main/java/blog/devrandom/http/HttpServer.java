@@ -1,106 +1,77 @@
 package blog.devrandom.http;
 
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
-import java.net.Socket;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.StringTokenizer;
+import java.util.Properties;
 
-public class HttpServer implements Runnable {
+/**
+ * {@link HttpServer} represents the entry point for the server.
+ */
+public class HttpServer {
 
-    private static final File WEB_ROOT = new File(".");
-    private static final File INDEX_HTML = new File(WEB_ROOT, "index.html");
-    private static final File NOT_FOUND = new File(WEB_ROOT, "404.html");
-    private static final File NOT_IMPLEMENTED = new File(WEB_ROOT, "501.html");
-    private static final DateTimeFormatter HTTP_FORMATTER = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z");
+    private static final String CONFIG_FILE = "server.properties";
+    private static final String PORT_PARAM = "server.port";
+    private static final String NAME_PARAM = "server.name";
 
-    private Socket request;
-
-    HttpServer(Socket request) {
-        this.request = request;
-    }
-
-    @Override
-    public void run() {
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(request.getInputStream()));
-             PrintWriter out = new PrintWriter(request.getOutputStream());
-             BufferedOutputStream dataOut = new BufferedOutputStream(request.getOutputStream())) {
-            // read the first header.
-            String header = in.readLine();
-            StringTokenizer tokenizer = new StringTokenizer(header);
-            String method = tokenizer.nextToken().toUpperCase();
-            String resource = tokenizer.nextToken().toLowerCase();
-            String protocol = tokenizer.nextToken();
-
-            String status;
-            File file;
-
-            if (method.equals("GET")) {
-                if (resource.endsWith("/")) {
-                    file = INDEX_HTML;
-                    status = " 200 OK";
-                } else {
-                    file = NOT_FOUND;
-                    status = " 404 Not Found";
-                }
-            } else {
-                file = NOT_IMPLEMENTED;
-                status = " 501 Not Implemented";
-            }
-
-            ZonedDateTime now = ZonedDateTime.now(ZoneId.of("GMT"));
-            String date = now.format(HTTP_FORMATTER);
-
-            System.out.printf("%s %s%s %s\n", method, resource, status, date);
-            byte[] data = readFile(file);
-
-            // write the headers
-            out.println(protocol + status);
-            out.println("Server: HttpServer v1.0");
-            out.println("Date: " + date);
-            out.println("Content-Type: text/html; charset=utf-8");
-            out.println("Content-Length: " + data.length);
-            out.println();
-            out.flush();
-
-            // write the file contents
-            dataOut.write(data, 0, data.length);
-            dataOut.flush();
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    private byte[] readFile(File file) throws IOException {
-        byte[] res;
-        try (FileInputStream fis = new FileInputStream(file)) {
-            int length = (int) file.length();
-            res = new byte[length];
-            fis.read(res, 0, length);
-        }
-        return res;
-    }
-
+    /**
+     * Main entry point to the server. This method loads the server configuration from server.properties and anything
+     * that the user might have overridden using -D command line args. Based on the configuration creates a
+     * {@link ServerSocket}. Each individual incoming request is handed off to {@link HttpRequestHandler} to further
+     * processing.
+     *
+     * @param args command line args
+     */
     public static void main(String[] args) {
-        try (ServerSocket serverSocket = new ServerSocket(8080)) {
-            System.out.println("HttpServer started and listening to port 8080");
-            // infinite loop
-            while (true) {
-                HttpServer server = new HttpServer(serverSocket.accept());
+        Properties config;
 
-                Thread thread = new Thread(server);
+        InetAddress serverAddress;
+        try (InputStream inputStream = ClassLoader.getSystemClassLoader().getResourceAsStream(CONFIG_FILE)) {
+            config = getServerConfiguration(System.getProperties(), inputStream);
+            String hostname = config.getProperty(NAME_PARAM);
+            serverAddress = InetAddress.getByName(hostname);
+        } catch (IOException e) {
+            System.out.println("Error occurred while reading configuration: " + e.getMessage());
+            return;
+        }
+
+        int serverPort = Integer.parseInt(config.getProperty(PORT_PARAM));
+        try (ServerSocket serverSocket = new ServerSocket(serverPort, 50, serverAddress)) {
+            System.out.printf("HttpServer started on http://%s:%d\n", serverAddress.getHostName(), serverPort);
+            // infinite loop
+            //noinspection InfiniteLoopStatement
+            while (true) {
+                HttpRequestHandler requestHandler = new HttpRequestHandler(serverSocket.accept(), config, System.out);
+
+                Thread thread = new Thread(requestHandler);
                 thread.start();
             }
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    /**
+     * Helper method to get all the server configuration properties
+     *
+     * @param userProps User defined properties
+     * @param stream    Default configuration
+     * @return Final server configuration
+     * @throws IOException When reading the default configuration
+     */
+    private static Properties getServerConfiguration(Properties userProps, InputStream stream) throws IOException {
+        Properties props = new Properties();
+        props.load(stream);
+
+        userProps.keySet().forEach(k -> {
+            String key = (String) k;
+            String value = userProps.getProperty(key);
+            if (value != null) {
+                props.put(key, value);
+            }
+        });
+        System.out.println(props);
+        return props;
     }
 }
