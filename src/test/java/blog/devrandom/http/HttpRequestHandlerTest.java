@@ -55,6 +55,34 @@ public class HttpRequestHandlerTest {
     }
 
     @Test
+    public void request_subdirectory_success() throws IOException {
+        // setup the request
+        prepareIncomingRequestStream(generateIncomingRequest("GET", "/css/main.css"));
+
+        // test
+        requestHandler.run();
+
+        // verify
+        StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));
+        assertEquals("HTTP/1.1", tokenizer.nextToken());
+        assertEquals("200", tokenizer.nextToken());
+    }
+
+    @Test
+    public void request_subdirectory_not_found() throws IOException {
+        // setup the request
+        prepareIncomingRequestStream(generateIncomingRequest("GET", "/css"));
+
+        // test
+        requestHandler.run();
+
+        // verify
+        StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));
+        assertEquals("HTTP/1.1", tokenizer.nextToken());
+        assertEquals("404", tokenizer.nextToken());
+    }
+
+    @Test
     public void request_otherResource_notFound() throws IOException {
         // setup
         prepareIncomingRequestStream(generateIncomingRequest("GET", "/favicon.ico"));
@@ -82,11 +110,45 @@ public class HttpRequestHandlerTest {
         assertEquals("501", tokenizer.nextToken());
     }
 
+    @Test
+    public void request_relative_bad_request() throws IOException {
+        // setup the request
+        prepareIncomingRequestStream(generateIncomingRequest("GET", "../css/main.css"));
+
+        // test
+        requestHandler.run();
+
+        // verify
+        StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));
+        assertEquals("HTTP/1.1", tokenizer.nextToken());
+        assertEquals("400", tokenizer.nextToken());
+    }
+
+    @Test
+    public void request_gzip_success() throws IOException {
+        // setup
+        prepareIncomingRequestStream(generateGzipIncomingRequest());
+
+        // test
+        requestHandler.run();
+
+        //verify
+        StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));
+        assertEquals("HTTP/1.1", tokenizer.nextToken());
+        assertEquals("200", tokenizer.nextToken());
+    }
     private String generateIncomingRequest(String method, String resource) {
         return method + " " + resource + " HTTP/1.1\n" +
                 "Host: localhost:8080\n" +
                 "User-Agent: curl/7.61.1\n" +
                 "Accept: */*\n";
+    }
+    private String generateGzipIncomingRequest() {
+        return "GET / HTTP/1.1\n" +
+                "Host: localhost:8080\n" +
+                "User-Agent: curl/7.61.1\n" +
+                "Accept: */*\n" +
+                "Accept-Encoding: gzip,deflate,br\n";
     }
 
     private void prepareIncomingRequestStream(String stream) throws IOException {

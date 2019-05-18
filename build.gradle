@@ -18,6 +18,16 @@ jar {
     }
 }
 
+distributions {
+    main {
+        contents {
+            from 'server', {
+                into 'bin/server'
+            }
+        }
+    }
+}
+
 repositories {
     mavenCentral()
 }
