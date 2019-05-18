@@ -71,7 +71,6 @@ public class HttpServer {
                 props.put(key, value);
             }
         });
-        System.out.println(props);
         return props;
     }
 }
