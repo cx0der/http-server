@@ -1,5 +1,6 @@
 package blog.devrandom.http;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,15 +30,23 @@ public class HttpRequestHandlerTest {
 
     private HttpRequestHandler requestHandler;
 
+    private AutoCloseable closeable;
+
     @Before
     public void setUp() throws IOException {
-        MockitoAnnotations.initMocks(this);
+        closeable = MockitoAnnotations.openMocks(this);
         outputStream = new ByteArrayOutputStream();
         when(client.getOutputStream()).thenReturn(outputStream);
         when(client.getInetAddress()).thenReturn(InetAddress.getByName("localhost"));
         Properties props = new Properties();
         props.put(HttpRequestHandler.ROOT_PARAM, "server");
+        props.put(HttpRequestHandler.WEB_ROOT, "server");
         requestHandler = new HttpRequestHandler(client, props, System.out);
+    }
+
+    @After
+    public void cleanUp() throws Exception {
+        closeable.close();
     }
 
     @Test
@@ -49,7 +58,7 @@ public class HttpRequestHandlerTest {
         requestHandler.run();
 
         // verify
-        StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));
+        StringTokenizer tokenizer = new StringTokenizer(outputStream.toString());
         assertEquals("HTTP/1.1", tokenizer.nextToken());
         assertEquals("200", tokenizer.nextToken());
     }
@@ -63,7 +72,7 @@ public class HttpRequestHandlerTest {
         requestHandler.run();
 
         // verify
-        StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));
+        StringTokenizer tokenizer = new StringTokenizer(outputStream.toString());
         assertEquals("HTTP/1.1", tokenizer.nextToken());
         assertEquals("200", tokenizer.nextToken());
     }
@@ -77,7 +86,7 @@ public class HttpRequestHandlerTest {
         requestHandler.run();
 
         // verify
-        StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));
+        StringTokenizer tokenizer = new StringTokenizer(outputStream.toString());
         assertEquals("HTTP/1.1", tokenizer.nextToken());
         assertEquals("404", tokenizer.nextToken());
     }
@@ -91,7 +100,7 @@ public class HttpRequestHandlerTest {
         requestHandler.run();
 
         // verify
-        StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));
+        StringTokenizer tokenizer = new StringTokenizer(outputStream.toString());
         assertEquals("HTTP/1.1", tokenizer.nextToken());
         assertEquals("404", tokenizer.nextToken());
     }
@@ -105,7 +114,7 @@ public class HttpRequestHandlerTest {
         requestHandler.run();
 
         //verify
-        StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));
+        StringTokenizer tokenizer = new StringTokenizer(outputStream.toString());
         assertEquals("HTTP/1.1", tokenizer.nextToken());
         assertEquals("501", tokenizer.nextToken());
     }
@@ -119,7 +128,7 @@ public class HttpRequestHandlerTest {
         requestHandler.run();
 
         // verify
-        StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));
+        StringTokenizer tokenizer = new StringTokenizer(outputStream.toString());
         assertEquals("HTTP/1.1", tokenizer.nextToken());
         assertEquals("400", tokenizer.nextToken());
     }
@@ -133,22 +142,26 @@ public class HttpRequestHandlerTest {
         requestHandler.run();
 
         //verify
-        StringTokenizer tokenizer = new StringTokenizer(new String(outputStream.toByteArray()));
+        StringTokenizer tokenizer = new StringTokenizer(outputStream.toString());
         assertEquals("HTTP/1.1", tokenizer.nextToken());
         assertEquals("200", tokenizer.nextToken());
     }
+
     private String generateIncomingRequest(String method, String resource) {
         return method + " " + resource + " HTTP/1.1\n" +
                 "Host: localhost:8080\n" +
                 "User-Agent: curl/7.61.1\n" +
                 "Accept: */*\n";
     }
+
     private String generateGzipIncomingRequest() {
-        return "GET / HTTP/1.1\n" +
-                "Host: localhost:8080\n" +
-                "User-Agent: curl/7.61.1\n" +
-                "Accept: */*\n" +
-                "Accept-Encoding: gzip,deflate,br\n";
+        return """
+                GET / HTTP/1.1
+                Host: localhost:8080
+                User-Agent: curl/7.61.1
+                Accept: */*
+                Accept-Encoding: gzip,deflate,br
+                """;
     }
 
     private void prepareIncomingRequestStream(String stream) throws IOException {

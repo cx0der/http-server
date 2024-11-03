@@ -40,7 +40,7 @@ import static blog.devrandom.http.Http.Header.UA;
 public class HttpRequestHandler implements Runnable {
 
     static final String ROOT_PARAM = "server.root";
-    private static final String WEB_ROOT = "web.root";
+    static final String WEB_ROOT = "web.root";
     private static final String SERVER_VERSION_PARAM = "server.response.version";
 
     private static final String INDEX_HTML = "index.html";

@@ -5,9 +5,6 @@ plugins {
 group 'blog.devrandom'
 version '1.0'
 
-sourceCompatibility = '1.8'
-targetCompatibility = '1.8'
-
 application {
     mainClassName = 'blog.devrandom.http.HttpServer'
 }
@@ -33,6 +30,6 @@ repositories {
 }
 
 dependencies {
-    testImplementation 'junit:junit:4.12'
-    testImplementation 'org.mockito:mockito-core:2.24.0'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-core:5.11.0'
 }
